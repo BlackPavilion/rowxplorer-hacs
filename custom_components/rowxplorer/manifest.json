@@ -1,0 +1,14 @@
+{
+  "domain": "rowxplorer",
+  "name": "Rowxplorer",
+  "codeowners": [
+    "@BlackPavilion"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/BlackPavilion/rowxplorer-hacs",
+  "integration_type": "device",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/BlackPavilion/rowxplorer-hacs/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

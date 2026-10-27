@@ -1,0 +1,149 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rowxplorer",
+        "menu_options": {
+          "credentials": "Cuenta Rowenta (email y contraseña)",
+          "token": "Refresh token"
+        }
+      },
+      "credentials": {
+        "title": "Cuenta Rowenta",
+        "description": "Inicia sesión con el email y la contraseña de tu cuenta Rowenta. La integración hace el login una vez, guarda el refresh token resultante y no conserva tu contraseña.\n\nSi tu cuenta usa verificación en dos pasos, vuelve atrás y usa la opción **Refresh token**.",
+        "data": {
+          "username": "Email",
+          "password": "Contraseña"
+        }
+      },
+      "token": {
+        "title": "Refresh token",
+        "description": "Pega el **refresh token** de tu cuenta SEB/Rowenta.\n\nPuedes obtenerlo con la CLI de `rowxplorer-lib`:\n\n```\nrowxplorer-lib login --user tu@email.com --password CONTRASEÑA\n```\n\nEl token que imprime es el único secreto que hay que guardar.",
+        "data": {
+          "refresh_token": "Refresh token"
+        }
+      },
+      "devices": {
+        "title": "Selecciona tu robot",
+        "description": "Estos son los robots vinculados a tu cuenta SEB. Elige el que quieras añadir.",
+        "data": {
+          "device": "Robot"
+        }
+      },
+      "robot": {
+        "title": "Robot",
+        "description": "El ID del robot y el product ID se han rellenado desde tu cuenta. Cámbialos solo si sabes que tu robot usa otra plataforma.\n\nLos cambios de estado llegan por MQTT en cuanto el robot los publica; el intervalo de actualización solo se usa como sondeo de respaldo cuando no llega ninguno.",
+        "data": {
+          "robot_id": "ID del robot (UUID)",
+          "name": "Nombre",
+          "product_id": "Product ID",
+          "mqtt_endpoint": "Endpoint MQTT",
+          "scan_interval": "Intervalo de actualización"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticar",
+        "description": "La sesión guardada de SEB ya no es válida. Inicia sesión de nuevo para obtener un refresh token nuevo.",
+        "data": {
+          "username": "Email",
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "El email/contraseña o el refresh token no son válidos. Si tu cuenta usa verificación en dos pasos, usa la opción **Refresh token**.",
+      "cannot_connect": "No se pudo conectar con el robot. Revisa el ID del robot y el endpoint MQTT, y comprueba que el robot esté en línea y vinculado a esta cuenta.",
+      "unknown": "Error inesperado. Revisa los registros de Home Assistant para más detalles."
+    },
+    "abort": {
+      "already_configured": "Este robot ya está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones",
+        "description": "Intervalo de sondeo de respaldo. Los cambios de estado llegan por MQTT en cuanto el robot los publica; esto solo indica cada cuánto pide Home Assistant el estado si no llega ninguno.",
+        "data": {
+          "scan_interval": "Intervalo de actualización"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": {
+        "name": "Batería"
+      },
+      "cleaning_area": {
+        "name": "Superficie limpiada"
+      },
+      "cleaning_time": {
+        "name": "Tiempo de limpieza"
+      },
+      "total_cleaning_time": {
+        "name": "Tiempo total de limpieza"
+      },
+      "method": {
+        "name": "Método de limpieza",
+        "state": {
+          "auto_cleaning": "Automático",
+          "back_to_dock": "Volviendo a la base",
+          "charge_go": "Cargar y continuar",
+          "left_bow": "Arco izquierdo",
+          "left_spiral": "Espiral izquierda",
+          "mop": "Fregado",
+          "partial_bow": "Arco parcial",
+          "pause": "En pausa",
+          "random": "Aleatorio",
+          "right_bow": "Arco derecho",
+          "right_spiral": "Espiral derecha",
+          "schedule_clean": "Limpieza programada",
+          "sleep": "Durmiendo",
+          "small_room_clean": "Habitación pequeña",
+          "smart": "Inteligente",
+          "spiral": "Puntual",
+          "wall_follow": "Siguiendo paredes"
+        }
+      },
+      "power": {
+        "name": "Potencia de succión",
+        "state": {
+          "silent": "Silencioso",
+          "normal": "Normal",
+          "strong": "Fuerte"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "state": {
+          "normal": "Sin error",
+          "left_side_brush_error": "Error del cepillo lateral izquierdo",
+          "right_side_brush_error": "Error del cepillo lateral derecho",
+          "main_brush_error": "Error del cepillo principal",
+          "left_wheel_error": "Error de la rueda izquierda",
+          "right_wheel_error": "Error de la rueda derecha",
+          "fan_motor_error": "Error del motor del ventilador",
+          "cliff_sensor_error": "Error del sensor de desnivel",
+          "off_ground_error": "Robot en el aire",
+          "bumper_error": "Error del parachoques",
+          "charging_error": "Error de carga",
+          "wall_sensor_error": "Error del sensor de pared",
+          "dustbin_error": "Error del depósito",
+          "front_wheel_error": "Error de la rueda delantera",
+          "no_battery_error": "Sin batería",
+          "low_battery_error": "Batería baja"
+        }
+      },
+      "side_brush": {
+        "name": "Cepillo lateral"
+      },
+      "main_brush": {
+        "name": "Cepillo principal"
+      },
+      "filter": {
+        "name": "Filtro"
+      }
+    }
+  }
+}

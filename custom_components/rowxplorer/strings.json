@@ -1,0 +1,149 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rowxplorer",
+        "menu_options": {
+          "credentials": "Rowenta account (email and password)",
+          "token": "Refresh token"
+        }
+      },
+      "credentials": {
+        "title": "Rowenta account",
+        "description": "Sign in with the email and password of your Rowenta account. The integration logs in once, stores the resulting refresh token and does not keep your password.\n\nIf your account uses two-step verification, go back and use the **Refresh token** option instead.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      },
+      "token": {
+        "title": "Refresh token",
+        "description": "Paste the long-lived **refresh token** of your SEB/Rowenta account.\n\nYou can obtain one with the `rowxplorer-lib` CLI:\n\n```\nrowxplorer-lib login --user you@example.com --password SECRET\n```\n\nThe printed token is the only secret that needs to be stored.",
+        "data": {
+          "refresh_token": "Refresh token"
+        }
+      },
+      "devices": {
+        "title": "Select your robot",
+        "description": "These are the robots linked to your SEB account. Pick the one you want to add.",
+        "data": {
+          "device": "Robot"
+        }
+      },
+      "robot": {
+        "title": "Robot",
+        "description": "The robot ID and product ID were filled in from your account. Only change them if you know your robot uses a different platform.\n\nState changes are pushed over MQTT as soon as the robot reports them; the update interval is only the fallback poll used when no update arrives.",
+        "data": {
+          "robot_id": "Robot ID (UUID)",
+          "name": "Name",
+          "product_id": "Product ID",
+          "mqtt_endpoint": "MQTT endpoint",
+          "scan_interval": "Update interval"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate",
+        "description": "The stored SEB session is no longer valid. Sign in again to obtain a new refresh token.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The email/password or the refresh token is not valid. If your account uses two-step verification, use the **Refresh token** option.",
+      "cannot_connect": "Could not connect to the robot. Check the robot ID and MQTT endpoint, and make sure the robot is online and linked to this account.",
+      "unknown": "Unexpected error. Check the Home Assistant logs for details."
+    },
+    "abort": {
+      "already_configured": "This robot is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "description": "Fallback polling interval. State changes are pushed over MQTT as soon as the robot reports them; this is only how often Home Assistant asks for the status when no update arrives.",
+        "data": {
+          "scan_interval": "Update interval"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery": {
+        "name": "Battery"
+      },
+      "cleaning_area": {
+        "name": "Cleaning area"
+      },
+      "cleaning_time": {
+        "name": "Cleaning time"
+      },
+      "total_cleaning_time": {
+        "name": "Total cleaning time"
+      },
+      "method": {
+        "name": "Cleaning method",
+        "state": {
+          "auto_cleaning": "Auto",
+          "back_to_dock": "Returning to dock",
+          "charge_go": "Charge & go",
+          "left_bow": "Left bow",
+          "left_spiral": "Left spiral",
+          "mop": "Mopping",
+          "partial_bow": "Partial bow",
+          "pause": "Paused",
+          "random": "Random",
+          "right_bow": "Right bow",
+          "right_spiral": "Right spiral",
+          "schedule_clean": "Scheduled clean",
+          "sleep": "Sleeping",
+          "small_room_clean": "Small room",
+          "smart": "Smart",
+          "spiral": "Spot",
+          "wall_follow": "Wall follow"
+        }
+      },
+      "power": {
+        "name": "Suction power",
+        "state": {
+          "silent": "Silent",
+          "normal": "Normal",
+          "strong": "Strong"
+        }
+      },
+      "error": {
+        "name": "Error",
+        "state": {
+          "normal": "No error",
+          "left_side_brush_error": "Left side brush error",
+          "right_side_brush_error": "Right side brush error",
+          "main_brush_error": "Main brush error",
+          "left_wheel_error": "Left wheel error",
+          "right_wheel_error": "Right wheel error",
+          "fan_motor_error": "Fan motor error",
+          "cliff_sensor_error": "Cliff sensor error",
+          "off_ground_error": "Off ground",
+          "bumper_error": "Bumper error",
+          "charging_error": "Charging error",
+          "wall_sensor_error": "Wall sensor error",
+          "dustbin_error": "Dustbin error",
+          "front_wheel_error": "Front wheel error",
+          "no_battery_error": "No battery",
+          "low_battery_error": "Low battery"
+        }
+      },
+      "side_brush": {
+        "name": "Side brush"
+      },
+      "main_brush": {
+        "name": "Main brush"
+      },
+      "filter": {
+        "name": "Filter"
+      }
+    }
+  }
+}
