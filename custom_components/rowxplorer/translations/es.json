@@ -23,16 +23,12 @@
           "refresh_token": "Refresh token"
         }
       },
-      "devices": {
-        "title": "Selecciona tu robot",
-        "description": "Estos son los robots vinculados a tu cuenta SEB. Elige el que quieras añadir.",
-        "data": {
-          "device": "Robot"
-        }
+      "auto_add": {
+        "title": "Añadiendo robot"
       },
       "robot": {
         "title": "Robot",
-        "description": "El ID del robot y el product ID se han rellenado desde tu cuenta. Cámbialos solo si sabes que tu robot usa otra plataforma.\n\nLos cambios de estado llegan por MQTT en cuanto el robot los publica; el intervalo de actualización solo se usa como sondeo de respaldo cuando no llega ninguno.",
+        "description": "Introduce los datos del robot manualmente (esta pantalla solo aparece cuando no se encuentran robots en tu cuenta SEB). El ID del robot es el UUID que usa `rowxplorer-lib`.\n\nLos cambios de estado llegan por MQTT en cuanto el robot los publica; el intervalo de actualización solo se usa como sondeo de respaldo cuando no llega ninguno.",
         "data": {
           "robot_id": "ID del robot (UUID)",
           "name": "Nombre",

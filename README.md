@@ -72,11 +72,12 @@ rowxplorer-lib login --user you@example.com --password SECRET
 
 ## Robot discovery
 
-The integration lists the robots linked to your SEB account and pre-fills the
-robot ID and product ID, so you usually do not need to know the UUID. If the
-list comes back empty (for example, your account lives in a different SEB
-perimeter), the flow falls back to manual entry. The robot UUID is the
-`ROBOT_ID` value used by `rowxplorer-lib` and looks like:
+The integration lists the robots linked to your SEB account and **adds them
+all automatically** — one config entry per robot, with the robot ID, product
+ID and name taken from the account. If the list comes back empty (for example,
+your account lives in a different SEB perimeter), the flow falls back to
+manual entry. The robot UUID is the `ROBOT_ID` value used by `rowxplorer-lib`
+and looks like:
 
 ```
 01234567-89ab-cdef-0123-456789abcdef
@@ -88,19 +89,18 @@ perimeter), the flow falls back to manual entry. The robot UUID is the
 2. Search for **Rowxplorer**.
 3. Choose **Rowenta account (email and password)** and sign in, or choose
    **Refresh token** to paste one manually.
-4. **Select your robot.** The integration lists the robots linked to your SEB
-   account: one robot is selected automatically, with several you pick the one
-   to add, and if none is found you enter the details manually.
-5. Confirm the **robot ID** and a name (both pre-filled from the selected
-   robot), and (optionally) the product ID, the MQTT endpoint and the fallback
-   update interval. The defaults work for the X-Plorer 45:
+4. Done: every robot linked to the account is added automatically (one entry
+   per robot). If no robot is found you enter the details manually instead:
+   the **robot ID** (UUID), a name, and (optionally) the product ID, the MQTT
+   endpoint and the fallback update interval. The defaults work for the
+   X-Plorer 45:
    - Product ID: `VAC001`
    - MQTT endpoint: `prod-new.iot.mqtt.groupe-seb.com`
    - Update interval: 60 s (between 15 and 600 s)
 
-The integration signs in, connects to the robot and fetches its status before
-creating the entry, so wrong credentials, a wrong robot ID or an offline robot
-are reported in the UI.
+Automatically added robots are not probed during setup: if a robot is offline
+(or not reachable over MQTT) its entry simply stays "not ready" until it
+answers, and the entities show as unavailable.
 
 Status changes arrive over MQTT as soon as the robot publishes them. The
 integration also polls every 60 s as a fallback; the interval is set during

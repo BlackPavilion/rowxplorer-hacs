@@ -23,16 +23,12 @@
           "refresh_token": "Refresh token"
         }
       },
-      "devices": {
-        "title": "Select your robot",
-        "description": "These are the robots linked to your SEB account. Pick the one you want to add.",
-        "data": {
-          "device": "Robot"
-        }
+      "auto_add": {
+        "title": "Adding robot"
       },
       "robot": {
         "title": "Robot",
-        "description": "The robot ID and product ID were filled in from your account. Only change them if you know your robot uses a different platform.\n\nState changes are pushed over MQTT as soon as the robot reports them; the update interval is only the fallback poll used when no update arrives.",
+        "description": "Enter the robot details manually (this screen is only shown when no robots are found in your SEB account). The robot ID is the UUID used by `rowxplorer-lib`.\n\nState changes are pushed over MQTT as soon as the robot reports them; the update interval is only the fallback poll used when no update arrives.",
         "data": {
           "robot_id": "Robot ID (UUID)",
           "name": "Name",

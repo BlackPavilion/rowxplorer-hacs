@@ -18,15 +18,12 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
-    SelectSelector,
-    SelectSelectorConfig,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
 
 from .const import (
-    CONF_DEVICE,
     CONF_MQTT_ENDPOINT,
     CONF_NAME,
     CONF_PRODUCT_ID,
@@ -55,6 +52,9 @@ from .rowxplorer_lib.exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Config flow source for the flows spawned to auto-add the account's robots.
+SOURCE_AUTO_ADD = "auto_add"
 
 STEP_TOKEN_SCHEMA = vol.Schema(
     {
@@ -138,8 +138,6 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the flow."""
         self._refresh_token: str = ""
         self._username: str = ""
-        self._devices: list[Device] = []
-        self._selected_device: Device | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -172,7 +170,7 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 self._refresh_token = refresh_token
                 self._username = username
-                return await self.async_step_devices()
+                return await self.async_step_discover()
 
         return self.async_show_form(
             step_id="credentials",
@@ -200,7 +198,7 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 self._refresh_token = refresh_token
-                return await self.async_step_devices()
+                return await self.async_step_discover()
 
         return self.async_show_form(
             step_id="token",
@@ -208,22 +206,16 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_devices(
+    async def async_step_discover(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Discover the robots in the account and let the user pick one."""
-        if user_input is not None:
-            # A device was selected from the dropdown.
-            self._selected_device = next(
-                (d for d in self._devices if d.uuid == user_input[CONF_DEVICE]),
-                None,
-            )
-            if self._selected_device is None:
-                # The list changed; re-discover.
-                return await self.async_step_devices()
-            return await self.async_step_robot()
+        """Add every robot linked to the account, automatically.
 
-        # First visit: fetch the account's robots.
+        One config entry is created per robot: this flow creates the first
+        one and spawns an ``auto_add`` flow for each of the rest. When the
+        account has no robots (e.g. a different SEB perimeter) the user
+        enters the robot details manually.
+        """
         try:
             devices = await self.hass.async_add_executor_job(
                 _list_devices, self._refresh_token
@@ -239,27 +231,64 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
         if not devices:
             # No robots found (e.g. different SEB perimeter): manual entry.
             return await self.async_step_robot()
-        if len(devices) == 1:
-            self._selected_device = devices[0]
-            return await self.async_step_robot()
 
-        self._devices = devices
-        options = [
-            {
-                "value": d.uuid,
-                "label": f"{d.name} ({d.uuid[:8]}…)" if d.name else d.uuid,
-            }
-            for d in devices
-        ]
-        return self.async_show_form(
-            step_id="devices",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_DEVICE): SelectSelector(
-                        SelectSelectorConfig(options=options)
-                    )
-                }
-            ),
+        first, *rest = devices
+        # Spawn one auto-add flow per remaining robot.
+        for device in rest:
+            try:
+                await self.hass.config_entries.flow.async_init(
+                    DOMAIN,
+                    data=self._device_flow_data(device),
+                    context={"source": SOURCE_AUTO_ADD},
+                )
+            except Exception:  # noqa: BLE001 - config flow boundary
+                _LOGGER.exception(
+                    "Could not spawn the auto-add flow for %s", device.uuid
+                )
+        return await self._create_robot_entry(first)
+
+    async def async_step_auto_add(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Add a robot discovered in the account (spawned by the main flow)."""
+        await self.async_set_unique_id(user_input[CONF_ROBOT_ID])
+        self._abort_if_unique_id_configured()
+        data = {
+            CONF_REFRESH_TOKEN: user_input[CONF_REFRESH_TOKEN],
+            CONF_ROBOT_ID: user_input[CONF_ROBOT_ID],
+            CONF_PRODUCT_ID: user_input[CONF_PRODUCT_ID],
+            CONF_MQTT_ENDPOINT: DEFAULT_MQTT_ENDPOINT,
+        }
+        if user_input.get(CONF_USERNAME):
+            data[CONF_USERNAME] = user_input[CONF_USERNAME]
+        return self.async_create_entry(
+            title=user_input.get(CONF_NAME) or DEFAULT_NAME,
+            data=data,
+            options={CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL},
+        )
+
+    def _device_flow_data(self, device: Device) -> dict[str, Any]:
+        """Flow data for a discovered robot (shared by the spawned flows)."""
+        return {
+            CONF_REFRESH_TOKEN: self._refresh_token,
+            CONF_USERNAME: self._username,
+            CONF_ROBOT_ID: device.uuid,
+            CONF_PRODUCT_ID: device.thing_type or DEFAULT_PRODUCT_ID,
+            CONF_NAME: device.name or DEFAULT_NAME,
+        }
+
+    async def _create_robot_entry(self, device: Device) -> ConfigFlowResult:
+        """Create a config entry for a discovered robot."""
+        await self.async_set_unique_id(device.uuid)
+        self._abort_if_unique_id_configured()
+        data = self._device_flow_data(device)
+        data[CONF_MQTT_ENDPOINT] = DEFAULT_MQTT_ENDPOINT
+        if not self._username:
+            data.pop(CONF_USERNAME, None)
+        return self.async_create_entry(
+            title=device.name or DEFAULT_NAME,
+            data=data,
+            options={CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL},
         )
 
     async def async_step_robot(
@@ -330,21 +359,9 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             ),
         }
-        schema = vol.Schema(schema)
-        if self._selected_device is not None:
-            schema = self.add_suggested_values_to_schema(
-                schema,
-                {
-                    CONF_ROBOT_ID: self._selected_device.uuid,
-                    CONF_PRODUCT_ID: (
-                        self._selected_device.thing_type or DEFAULT_PRODUCT_ID
-                    ),
-                    CONF_NAME: self._selected_device.name or DEFAULT_NAME,
-                },
-            )
         return self.async_show_form(
             step_id="robot",
-            data_schema=schema,
+            data_schema=vol.Schema(schema),
             errors=errors,
         )
 
