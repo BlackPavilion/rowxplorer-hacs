@@ -330,6 +330,7 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             ),
         }
+        schema = vol.Schema(schema)
         if self._selected_device is not None:
             schema = self.add_suggested_values_to_schema(
                 schema,
@@ -343,7 +344,7 @@ class RowxplorerConfigFlow(ConfigFlow, domain=DOMAIN):
             )
         return self.async_show_form(
             step_id="robot",
-            data_schema=vol.Schema(schema),
+            data_schema=schema,
             errors=errors,
         )
 
