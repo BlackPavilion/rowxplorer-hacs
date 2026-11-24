@@ -25,8 +25,9 @@ vendored inside the integration.
 - **Robot auto-discovery**: the integration lists the robots linked to your SEB
   account and pre-fills the robot ID and product ID.
 - **Push updates**: the robot publishes its status over MQTT, so changes show
-  up in Home Assistant within seconds. A 60 s poll (configurable) stays as a
-  fallback.
+  up in Home Assistant within seconds. Adaptive polling backs off to every
+  27 minutes while idle/docked and polls faster (60 s by default, configurable)
+  only while actively cleaning or returning to dock.
 - Diagnostics support with the refresh token redacted.
 
 ## Requirements
@@ -96,15 +97,19 @@ and looks like:
    X-Plorer 45:
    - Product ID: `VAC001`
    - MQTT endpoint: `prod-new.iot.mqtt.groupe-seb.com`
-   - Update interval: 60 s (between 15 and 600 s)
+   - Update interval: 60 s while active (between 15 and 3600 s; relaxes to
+     27 min while idle/docked)
 
 Automatically added robots are not probed during setup: if a robot is offline
-(or not reachable over MQTT) its entry simply stays "not ready" until it
-answers, and the entities show as unavailable.
+(or not reachable over MQTT) the entities show as unavailable while the
+integration backs off exponentially (2 min up to 30 min) until the robot
+answers again.
 
-Status changes arrive over MQTT as soon as the robot publishes them. The
-integration also polls every 60 s as a fallback; the interval is set during
-setup and can be changed later from the integration → **Configure**.
+Status changes arrive over MQTT as soon as the robot publishes them. While the
+robot is actively cleaning or returning to its dock, the integration also polls
+at the configured interval (60 s by default, changeable from the integration →
+**Configure**); while docked/idle it relaxes to 27 min to avoid overloading the
+robot's Wi-Fi module and the SEB cloud.
 
 ## Entities
 

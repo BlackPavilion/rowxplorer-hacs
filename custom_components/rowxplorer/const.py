@@ -13,7 +13,18 @@ DEFAULT_MQTT_ENDPOINT: Final = "prod-new.iot.mqtt.groupe-seb.com"
 DEFAULT_PRODUCT_ID: Final = "VAC001"
 DEFAULT_SCAN_INTERVAL: Final = 60
 MIN_SCAN_INTERVAL: Final = 15
-MAX_SCAN_INTERVAL: Final = 600
+MAX_SCAN_INTERVAL: Final = 3600
+
+# Adaptive polling intervals (seconds):
+# - While the robot is docked/idle, rely on MQTT push updates and only send
+#   fallback getStatus probes every 27 min (aligned with the 53 min proactive
+#   MQTT session refresh so Cognito credentials rotate before expiry).
+# - While the robot is offline, back off exponentially from 2 min up to 30 min.
+IDLE_SCAN_INTERVAL: Final = 1620
+OFFLINE_BACKOFF_BASE: Final = 120
+OFFLINE_BACKOFF_MAX: Final = 1800
+
+ACTIVE_STATES: Final = frozenset({"CLEANING", "DOCKING", "UPGRADING"})
 
 CONF_REFRESH_TOKEN: Final = "refresh_token"
 CONF_ROBOT_ID: Final = "robot_id"
@@ -87,6 +98,7 @@ STATUS_TO_ACTIVITY: Final = {
     "CHARGING": VacuumActivity.DOCKED,
     "DOCKING": VacuumActivity.RETURNING,
     "STANDBY": VacuumActivity.IDLE,
+    "SLEEPING": VacuumActivity.IDLE,
     "STOP": VacuumActivity.PAUSED,
     "UPGRADING": VacuumActivity.IDLE,
     "ERROR": VacuumActivity.ERROR,

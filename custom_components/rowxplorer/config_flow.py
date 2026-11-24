@@ -118,7 +118,6 @@ def _probe_robot(
             mqtt_endpoint=mqtt_endpoint,
             product_id=product_id,
             robot_id=robot_id,
-            client_id="#homeassistant-setup",
             timeout=20.0,
             connect_timeout=20.0,
         ),

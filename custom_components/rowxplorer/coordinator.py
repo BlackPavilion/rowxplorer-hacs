@@ -15,6 +15,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    ACTIVE_STATES,
     CONF_MQTT_ENDPOINT,
     CONF_PRODUCT_ID,
     CONF_REFRESH_TOKEN,
@@ -22,6 +23,9 @@ from .const import (
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    IDLE_SCAN_INTERVAL,
+    OFFLINE_BACKOFF_BASE,
+    OFFLINE_BACKOFF_MAX,
     PRODUCT_MODELS,
 )
 from .rowxplorer_lib import (
@@ -47,38 +51,61 @@ class RowxplorerCoordinator(DataUpdateCoordinator[RobotStatus]):
         self.robot_id: str = entry.data[CONF_ROBOT_ID]
         self.product_id: str = entry.data[CONF_PRODUCT_ID]
         self._command_lock = asyncio.Lock()
+        self._active_scan_interval: int = int(
+            entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        )
+        self._consecutive_failures: int = 0
 
         self.auth = SebAuth(
             SebAuthConfig(refresh_token=entry.data[CONF_REFRESH_TOKEN])
         )
+        # Leave client_id unset so each fresh MQTT session gets a unique
+        # neutral ``#<uuid>`` identifier (avoids DUPLICATE_CLIENTID kicks).
         self.client = RowxplorerClient.seb(
             auth=self.auth,
             mqtt_config=SebMqttConfig(
                 mqtt_endpoint=entry.data[CONF_MQTT_ENDPOINT],
                 product_id=self.product_id,
                 robot_id=self.robot_id,
-                client_id=f"#homeassistant-{entry.entry_id[:8]}",
                 timeout=20.0,
             ),
         )
         # The robot publishes its status on the MQTT ``status`` topic. Use
         # those messages for near-real-time updates; the periodic poll stays
-        # as a fallback (and to refresh the connection).
+        # as a slow fallback when idle and fast only while actively cleaning.
         self.client.transport.status_callback = self._on_status_push
 
-        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
-            update_interval=timedelta(seconds=scan_interval),
+            update_interval=timedelta(
+                seconds=max(self._active_scan_interval, IDLE_SCAN_INTERVAL)
+            ),
         )
 
     @property
     def model(self) -> str:
         """Return a human readable model name."""
         return PRODUCT_MODELS.get(self.product_id, self.product_id)
+
+    def _update_poll_interval(self, status: RobotStatus) -> None:
+        """Adjust the polling cadence based on whether the robot is active."""
+        state = (status.execution_state or "").upper()
+        if state in ACTIVE_STATES:
+            target = self._active_scan_interval
+        else:
+            target = max(self._active_scan_interval, IDLE_SCAN_INTERVAL)
+        new_interval = timedelta(seconds=target)
+        if self.update_interval != new_interval:
+            _LOGGER.debug(
+                "Adjusting poll interval for %s (%s) to %ds",
+                self.robot_id,
+                state or "unknown",
+                target,
+            )
+            self.update_interval = new_interval
 
     def _on_status_push(self, payload: dict[str, Any]) -> None:
         """Handle a status message pushed by the robot (MQTT thread)."""
@@ -98,13 +125,15 @@ class RowxplorerCoordinator(DataUpdateCoordinator[RobotStatus]):
             status.execution_state,
             status.battery_level,
         )
+        self._consecutive_failures = 0
+        self._update_poll_interval(status)
         self.async_set_updated_data(status)
 
     async def _async_update_data(self) -> RobotStatus:
         """Fetch the current robot status."""
         async with self._command_lock:
             try:
-                return await self.hass.async_add_executor_job(self.client.status)
+                status = await self.hass.async_add_executor_job(self.client.status)
             except AuthenticationError as err:
                 raise ConfigEntryAuthFailed(str(err)) from err
             except Exception as err:  # noqa: BLE001 - transport boundary
@@ -113,9 +142,18 @@ class RowxplorerCoordinator(DataUpdateCoordinator[RobotStatus]):
                 await self.hass.async_add_executor_job(
                     self.client.transport.disconnect
                 )
+                self._consecutive_failures += 1
+                delay = min(
+                    OFFLINE_BACKOFF_MAX,
+                    OFFLINE_BACKOFF_BASE * (2 ** (self._consecutive_failures - 1)),
+                )
+                self.update_interval = timedelta(seconds=delay)
                 raise UpdateFailed(
                     f"Error communicating with the robot: {err}"
                 ) from err
+        self._consecutive_failures = 0
+        self._update_poll_interval(status)
+        return status
 
     async def async_run_command(
         self, func: Callable[..., Any], *args: Any, **kwargs: Any
